@@ -1,7 +1,7 @@
 /*	Partner(s) Name & E-mail: Francisco Munoz	fmuno003@ucr.edu
  *	Lab Section: 022
  *	Assignment: Lab #4  Exercise #1
- *	Exercise Description: Fix Code
+ *	Exercise Description: Master
  *	
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
@@ -27,7 +27,6 @@
 
 int count = 0xFF;
 unsigned char receivedData;
-enum servantStates {s_wait, read} states;
 enum masterStates {wait, send} state;
 
 void transmit_data(unsigned char data) {
@@ -41,7 +40,7 @@ void transmit_data(unsigned char data) {
 		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
 		PORTC |= 0x04;
 	}
-	// set RCLK = 1. Rising edge copies data from the ìShiftî register to the ìStorageî register
+	// set RCLK = 1. Rising edge copies data from the ‚ÄúShift‚Äù register to the ‚ÄúStorage‚Äù register
 	PORTC |= 0x02;
 	// clears all lines in preparation of a new transmission
 	PORTC = 0x00;
@@ -98,32 +97,6 @@ void TickFct_master()
 			break;
 	}
 }
-void TickFct_servant() 
-{
-	switch( states )  
-	{
-		case s_wait:
-			states = read;
-			break;
-		case read:
-			states = s_wait;
-			break;
-		default:
-			states = s_wait;
-			break;
-	}
-	switch( states ) 
-	{
-		case s_wait:
-			break;
-		case read:
-			receivedData = SPDR;
-			PORTC = transmit_Data(receivedData);
-			break;
-		default:
-			break;
-	}
-}
 void Master_Task()
 {
 	state = wait;
@@ -144,12 +117,8 @@ int main(void)
         DDRA = 0xFF; PORTA = 0x00;
         SPI_MasterInit();
         
-        //SLAVE
-        //SPI_ServantInit();
-        //DDRC = 0xFF; PORTC = 0x00;
-        //DDRA = 0xFF; PORTA = 0x00;
-		StartSecPulse(1);
-		vTaskStartScheduler();
+	StartSecPulse(1);
+	vTaskStartScheduler();
 		
 	return 0;       
 }
