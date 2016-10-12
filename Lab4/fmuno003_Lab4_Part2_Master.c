@@ -376,10 +376,10 @@ void TickFct_LCD()
 }
 void Servant_Task()
 {
-	state = wait;
+	state = m_read;
 	for(;;)
 	{
-		TickFct_servant();
+		TickFct_master();
 	}
 }
 void StartSecPulse(unsigned portBASE_TYPE Priority)
