@@ -2,7 +2,7 @@
  *	Lab Section: 022
  *	Assignment: Lab #4  Exercise #2
  *	Exercise Description: Servant
- *	
+ *	Debug Some code
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  */ 
@@ -55,7 +55,7 @@ void transmit_data(unsigned char data)
 		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
 		PORTC |= 0x04;
 	}
-	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
+	// set RCLK = 1. Rising edge copies data from the â€œShiftâ€ register to the â€œStorageâ€ register
 	PORTC |= 0x02;
 	// clears all lines in preparation of a new transmission
 	PORTC = 0x00;
