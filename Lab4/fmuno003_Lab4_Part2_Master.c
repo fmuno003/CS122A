@@ -1,7 +1,7 @@
 /*	Partner(s) Name & E-mail: Francisco Munoz	fmuno003@ucr.edu
  *	Lab Section: 022
- *	Assignment: Lab #4  Exercise #1
- *	Exercise Description: Fix Code
+ *	Assignment: Lab #4  Exercise #2
+ *	Exercise Description: Master
  *	
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
@@ -38,14 +38,30 @@ unsigned char data = 0x11;
 unsigned char pattern3 = 0x01;
 unsigned char pattern4 = 0xF0;
 
-enum servantStates {s_wait, read} states;
+//enum servantStates {s_wait, read} states;
 enum masterStates {m_read} state;
-enum pattern1States {wait1, light1, light2} lightState;
+/*enum pattern1States {wait1, light1, light2} lightState;
 enum pattern2States {wait2, light3, light4} lightState2;
 enum pattern3States {wait3, shift_left, shift_right} lightState3;
-enum pattern4States {wait4, shift_left4, shift_right4} lightState4;
-enum LCDStates {LCD_read} LCDState;
-		
+enum pattern4States {wait4, shift_left4, shift_right4} lightState4;*/
+
+void transmit_data(unsigned char data) 
+{
+	unsigned char i;
+	for (i = 0; i < 8 ; ++i) {
+		// Sets SRCLR to 1 allowing data to be set
+		// Also clears SRCLK in preparation of sending data
+		PORTC = 0x08;
+		// set SER = next bit of data to be sent.
+		PORTC |= ((data >> i) & 0x01);
+		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
+		PORTC |= 0x04;
+	}
+	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
+	PORTC |= 0x02;
+	// clears all lines in preparation of a new transmission
+	PORTC = 0x00;
+}	
 void SPI_MasterInit(void) {
 	// Set DDRB to have MOSI, SCK, and SS as output and MISO as input
 	DDRB = 0xBF; PORTB = 0x40;
@@ -99,55 +115,44 @@ void TickFct_master()
 			case 'A':
 				data = data & clr_highNibble;
 				data = data | 0x10;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case 'B':
 				data = data & clr_highNibble;
 				data = data | 0x20;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case 'C':
 				data = data & clr_highNibble;
 				data = data | 0x30;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case 'D':
 				data = data & clr_highNibble;
 				data = data | 0x40;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case '1':
 				data = data & clr_lowNibble;
 				data = data | 0x01;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case '2':
 				data = data & clr_lowNibble;
 				data = data | 0x02;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case '3':
 				data = data & clr_lowNibble;
 				data = data | 0x03;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case '4':
 				data = data & clr_lowNibble;
 				data = data | 0x04;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case '5':
 				data = data & clr_lowNibble;
 				data = data | 0x05;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			case '6':
 				data = data & clr_lowNibble;
 				data = data | 0x06;
-				PORTA = SetBit(PORTA,2,1);
 				break;
 			default:
-				PORTA = SetBit(PORTA,2,0);
 				break;
 		}
 		SPI_MasterTransmit(data);
@@ -156,225 +161,7 @@ void TickFct_master()
 			break;
 	}
 }
-void TickFct_servant() 
-{
-	switch( state )  
-	{
-		case s_wait:
-			state = read;
-			break;
-		case read:
-			state = s_wait;
-			break;
-		default:
-			state = s_wait;
-			break;
-	}
-	switch( state ) 
-	{
-		case s_wait:
-			PORTA = SetBit(PORTA,0,0);
-			break;
-		case read:
-			PORTA = SetBit(PORTA,0,1);
-			temp = receivedData;
-			speed = temp & 0x0F;
-			pattern = (temp >> 4) & 0x0F;
-			break;
-		default:
-			break;
-	}
-}
-void TickFct_pattern1() {
-	switch( lightState ) 
-	{
-		case wait1:
-			if(pattern == 1)
-				lightState = light1;
-			else
-				lightState = wait1;
-			break;
-		case light1:
-			if(pattern != 1)
-				lightState = wait1;
-			else if(pattern == 1)
-				lightState = light2;
-			break;
-		case light2:
-			if(pattern != 1)
-				lightState = wait1;
-			else if(pattern == 1)
-				lightState = light1;
-			break;
-		default:
-			break;
-	}
-	switch( lightState ) 
-	{
-		case wait1:
-			break;
-		case light1:
-			PORTC = pattern | 0x0E;
-			break;
-		case light2:
-			PORTC = 0xF0;
-			break;
-		default:
-			break;
-	}
-}
-void TickFct_pattern2() 
-{
-	switch( lightState2 ) 
-	{
-		case wait2:
-			if(pattern == 2)
-				lightState2 = light3;
-			else
-				lightState2 = wait2;
-			break;
-		case light3:
-			if(pattern != 2)
-				lightState2 = wait2;
-			else if(pattern == 2)
-				lightState2 = light4;
-			break;
-		case light4:
-			if(pattern != 2)
-				lightState2 = wait2;
-			else if(pattern == 2)
-				lightState2 = light3;
-			break;
-		default:
-			break;
-	}
-	switch( lightState2 ) 
-	{
-		case wait2:
-			break;
-		case light3:
-			PORTC = pattern | 0xA8;
-			break;
-		case light4:
-			PORTC = 0x55;
-			break;
-		default:
-			break;
-	}
-}
-void TickFct_pattern3() 
-{
-	switch( lightState3 ) 
-	{
-		case wait3:
-			if(pattern == 3) 
-			{
-				pattern3 = 0x80;
-				lightState3 = shift_right;
-			}
-			else
-				lightState3 = wait3;
-			break;
-		case shift_left:
-			if(pattern == 3 && pattern3 != 0x80)
-				lightState3 = shift_left;
-			else if(pattern ==3 && pattern3 == 0x80)
-				lightState3 = shift_right;
-			else if(pattern != 3)
-				lightState3 = wait3;
-			break;
-		case shift_right:
-			if(pattern == 3 && pattern3 != 0x01)
-				lightState3 = shift_right;
-			else if(pattern == 3 && pattern3 == 0x01)
-				lightState3 = shift_left;
-			else if(pattern != 3)
-				lightState3 = wait3;
-			break;
-		default:
-			break;
-	}
-	switch( lightState3 ) 
-	{
-		case wait3:
-			pattern3 = 0x00;
-			break;
-		case shift_left:
-			pattern3 = pattern3 << 1;
-			PORTC = pattern3;
-			break;
-		case shift_right:
-			pattern3 = pattern3 >> 1;
-			PORTC = pattern3;
-			break;
-		default:
-			break;
-	}
-}
-void TickFct_pattern4() 
-{
-	switch( lightState4 ) 
-	{
-		case wait4:
-			if(pattern == 4)
-				lightState4 = shift_right4;
-			else
-				lightState4 = wait4;
-			break;
-		case shift_left4:
-			if(pattern == 4 && pattern4 != 0xF0)
-				lightState4 = shift_left4;
-			else if(pattern == 4 && pattern4 == 0xF0)
-				lightState4 = shift_right4;
-			else if(pattern != 4)
-				lightState4 = wait4;
-			break;
-		case shift_right4:
-			if(pattern == 4 && pattern4 != 0x0F)
-				lightState4 = shift_right4;
-			else if(pattern == 4 && pattern4 == 0x0F)
-				lightState4 = shift_left4;
-			else if(pattern != 4)
-				lightState4 = wait4;
-			break;
-		default:
-			break;
-	}
-	switch( lightState4 ) 
-	{
-		case wait4:
-			break;
-		case shift_left4:
-			pattern4 = pattern4 << 1;
-			PORTC = pattern4;
-			break;
-		case shift_right4:
-			pattern4 = pattern4 >> 1;
-			PORTC = pattern4;
-			break;
-		default:
-			break;
-	}
-}
-void TickFct_LCD() 
-{
-	switch( LCDState ) 
-	{
-		case LCD_read:
-			state = LCD_read;
-			break;
-		default:
-			break;
-	}
-	switch( LCDState )
-	{
-		case LCD_read:
-			break;
-		default:
-			break;
-	}
-}
-void Servant_Task()
+void Master_Task()
 {
 	state = m_read;
 	for(;;)
@@ -384,7 +171,7 @@ void Servant_Task()
 }
 void StartSecPulse(unsigned portBASE_TYPE Priority)
 {
-	xTaskCreate(Servant_Task, (signed portCHAR *)"Servant_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
+	xTaskCreate(Master_Task, (signed portCHAR *)"Master_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
 }
 int main(void)
 {
@@ -403,4 +190,3 @@ int main(void)
 		
 	return 0;       
 }
-

@@ -25,11 +25,27 @@
 #include "croutine.h"
 #include "bit.h"
 
-int count = 0;
+int count = 0xFF;
 unsigned char receivedData;
 enum servantStates {s_wait, read} states;
 enum masterStates {wait, send} state;
 
+void transmit_data(unsigned char data) {
+	unsigned char i;
+	for (i = 0; i < 8 ; ++i) {
+		// Sets SRCLR to 1 allowing data to be set
+		// Also clears SRCLK in preparation of sending data
+		PORTC = 0x08;
+		// set SER = next bit of data to be sent.
+		PORTC |= ((data >> i) & 0x01);
+		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
+		PORTC |= 0x04;
+	}
+	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
+	PORTC |= 0x02;
+	// clears all lines in preparation of a new transmission
+	PORTC = 0x00;
+}
 void SPI_MasterInit(void) {
 	// Set DDRB to have MOSI, SCK, and SS as output and MISO as input
 	DDRB = 0xBF; PORTB = 0x40;
@@ -74,13 +90,8 @@ void TickFct_master()
 	switch( state ) 
 	{
 		case wait:
-			PORTA = SetBit(PORTA,2,0);
-			count++;
-			if( count >= 0xFF )
-				count = 0;
 			break;
 		case send:
-			PORTA = SetBit(PORTA,2,1);
 			SPI_MasterTransmit(count);
 			break;
 		default:
@@ -104,22 +115,21 @@ void TickFct_servant()
 	switch( states ) 
 	{
 		case s_wait:
-			PORTA = SetBit(PORTA,0,0);
 			break;
 		case read:
-			PORTA = SetBit(PORTA,0,1);
-			PORTC = receivedData;
+			receivedData = SPDR;
+			PORTC = transmit_Data(receivedData);
 			break;
 		default:
 			break;
 	}
 }
-void Servant_Task()
+void Master_Task()
 {
 	state = wait;
 	for(;;)
 	{
-		TickFct_servant();
+		TickFct_master();
 	}
 }
 void StartSecPulse(unsigned portBASE_TYPE Priority)
@@ -129,15 +139,15 @@ void StartSecPulse(unsigned portBASE_TYPE Priority)
 int main(void)
 {
         // MASTER
-        /*DDRC = 0xF0; PORTC = 0x0F;
+        DDRC = 0xF0; PORTC = 0x0F;
         DDRD = 0xFF; PORTD = 0x00;
         DDRA = 0xFF; PORTA = 0x00;
-        SPI_MasterInit();*/
+        SPI_MasterInit();
         
         //SLAVE
-        SPI_ServantInit();
-        DDRC = 0xFF; PORTC = 0x00;
-        DDRA = 0xFF; PORTA = 0x00;
+        //SPI_ServantInit();
+        //DDRC = 0xFF; PORTC = 0x00;
+        //DDRA = 0xFF; PORTA = 0x00;
 		StartSecPulse(1);
 		vTaskStartScheduler();
 		
