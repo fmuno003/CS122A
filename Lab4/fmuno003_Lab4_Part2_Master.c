@@ -2,11 +2,10 @@
  *	Lab Section: 022
  *	Assignment: Lab #4  Exercise #2
  *	Exercise Description: Master
- *	Debug Some code
+ *
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  */ 
-
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -28,22 +27,12 @@
 #include "lcd.h"
 
 unsigned char receivedData;
-unsigned char temp;
-unsigned char pattern;
-unsigned char speed;
 unsigned char clr_highNibble = 0x0F;
 unsigned char clr_lowNibble = 0xF0;
 unsigned char btn;
 unsigned char data = 0x11;
-unsigned char pattern3 = 0x01;
-unsigned char pattern4 = 0xF0;
 
-//enum servantStates {s_wait, read} states;
 enum masterStates {m_read} state;
-/*enum pattern1States {wait1, light1, light2} lightState;
-enum pattern2States {wait2, light3, light4} lightState2;
-enum pattern3States {wait3, shift_left, shift_right} lightState3;
-enum pattern4States {wait4, shift_left4, shift_right4} lightState4;*/
 
 void transmit_data(unsigned char data) 
 {
@@ -71,7 +60,8 @@ void SPI_MasterInit(void) {
 	// Make sure global interrupts are enabled on SREG register (pg. 9)
 	SREG =0x80;
 }
-void SPI_MasterTransmit(unsigned char cData) {
+void SPI_MasterTransmit(unsigned char cData) 
+{
 	// set SS low
 	PORTB = SetBit(PORTB,4,0);
 	// data in SPDR will be transmitted, e.g. SPDR = cData;
@@ -81,14 +71,6 @@ void SPI_MasterTransmit(unsigned char cData) {
 	}
 	// set SS high
 	PORTB = SetBit(PORTB,4,1);
-}
-void SPI_ServantInit(void) {
-	// set DDRB to have MISO line as output and MOSI, SCK, and SS as input
-	DDRB = 0x40; PORTB = 0xBF;
-	// set SPCR register to enable SPI and enable SPI interrupt (pg. 168)
-	SPCR |= (1<<SPE) | (1<<SPIE);
-	// make sure global interrupts are enabled on SREG register (pg. 9)
-	SREG = 0x80;
 }
 ISR(SPI_STC_vect){ // this is enabled in with the SPCR register?s ?SPI
 	// Interrupt Enable?
@@ -180,11 +162,6 @@ int main(void)
         DDRD = 0xFF; PORTD = 0x00;
         DDRA = 0xFF; PORTA = 0x00;
         SPI_MasterInit();
-        
-		// SLAVE
-        /*SPI_ServantInit();
-        DDRC = 0xFF; PORTC = 0x00;
-        DDRA = 0xFF; PORTA = 0x00;*/
 		StartSecPulse(1);
 		vTaskStartScheduler();
 		
