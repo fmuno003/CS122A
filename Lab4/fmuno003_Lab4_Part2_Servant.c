@@ -2,10 +2,11 @@
  *	Lab Section: 022
  *	Assignment: Lab #4  Exercise #2
  *	Exercise Description: Servant
- *	Debug Some code
+ *	
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  */ 
+
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -23,10 +24,47 @@
 #include "task.h"
 #include "croutine.h"
 #include "bit.h"
+#include <avr/io.h>
 #include "keypad.h"
-#include "lcd.h"
+#include "lcd_8bit_task.h"
+#include "scheduler.h"
 
 unsigned char receivedData;
+void SPI_MasterInit(void) {
+        // Set DDRB to have MOSI, SCK, and SS as output and MISO as input
+        DDRB = 0xBF; PORTB = 0x40;
+        // Set SPCR register to enable SPI, enable master, and use SCK frequency
+        SPCR |= (1<<SPE) | (1<<MSTR) | (1<<SPR0);
+        //   of fosc/16  (pg. 168)
+        // Make sure global interrupts are enabled on SREG register (pg. 9)
+        SREG =0x80;
+}
+void SPI_MasterTransmit(unsigned char cData) {      
+        // set SS low
+        PORTB = SetBit(PORTB,4,0);
+                // data in SPDR will be transmitted, e.g. SPDR = cData;
+                SPDR = cData;
+        while(!(SPSR & (1<<SPIF))) { // wait for transmission to complete
+        ;
+        }
+        // set SS high
+        PORTB = SetBit(PORTB,4,1);      
+}
+void SPI_ServantInit(void) {
+        // set DDRB to have MISO line as output and MOSI, SCK, and SS as input
+        DDRB = 0x40; PORTB = 0xBF;
+        // set SPCR register to enable SPI and enable SPI interrupt (pg. 168)
+        SPCR |= (1<<SPE) | (1<<SPIE);
+        // make sure global interrupts are enabled on SREG register (pg. 9)
+        SREG = 0x80;
+}
+ISR(SPI_STC_vect) { // this is enabled in with the SPCR register?s ?SPI
+  // Interrupt Enable?
+        // SPDR contains the received data, e.g. unsigned char receivedData =
+// SPDR;
+        receivedData = SPDR;
+}
+
 unsigned char temp;
 unsigned char pattern;
 unsigned char speed;
@@ -45,8 +83,8 @@ enum pattern4States {wait4, shift_left4, shift_right4} lightState4;
 
 void transmit_data(unsigned char data) 
 {
-	unsigned char i;
-	for (i = 0; i < 8 ; ++i) {
+	for(int i = 0; i < 8; ++i)
+	{
 		// Sets SRCLR to 1 allowing data to be set
 		// Also clears SRCLK in preparation of sending data
 		PORTC = 0x08;
@@ -55,40 +93,27 @@ void transmit_data(unsigned char data)
 		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
 		PORTC |= 0x04;
 	}
-	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
+	// set RCLK = 1. Rising edge copies data from the �Shift� register to the
+	// �Storage� register
 	PORTC |= 0x02;
 	// clears all lines in preparation of a new transmission
 	PORTC = 0x00;
-}	
-void SPI_ServantInit(void) {
-	// set DDRB to have MISO line as output and MOSI, SCK, and SS as input
-	DDRB = 0x40; PORTB = 0xBF;
-	// set SPCR register to enable SPI and enable SPI interrupt (pg. 168)
-	SPCR |= (1<<SPE) | (1<<SPIE);
-	// make sure global interrupts are enabled on SREG register (pg. 9)
-	SREG = 0x80;
-}
-ISR(SPI_STC_vect){ // this is enabled in with the SPCR register?s ?SPI
-	// Interrupt Enable?
-	// SPDR contains the received data, e.g. unsigned char receivedData =
-	// SPDR;
-	receivedData = SPDR;
 }
 void TickFct_servant()
 {
-	switch( state )
+	switch( states )
 	{
 		case s_wait:
-			state = read;
+			states = read;
 			break;
 		case read:
-			state = s_wait;
+			states = s_wait;
 			break;
 		default:
-			state = s_wait;
+			states = s_wait;
 			break;
 	}
-	switch( state )
+	switch( states )
 	{
 		case s_wait:
 			break;
@@ -96,16 +121,12 @@ void TickFct_servant()
 			temp = receivedData;
 			speed = temp & 0x0F;
 			pattern = (temp >> 4) & 0x0F;
-			if(pattern != 0x00)
-			{
-				Pattern_Task(pattern);
-			}
 			break;
 		default:
 			break;
 	}
 }
-void TickFct_pattern1() 
+void TickFct_pattern1()
 {
 	switch( lightState )
 	{
@@ -135,10 +156,10 @@ void TickFct_pattern1()
 		case wait1:
 			break;
 		case light1:
-			PORTC = transmit_data(pattern | 0x0E);
+			transmit_data(pattern | 0x0E);
 			break;
 		case light2:
-			PORTC = transmit_data(0xF0);
+			transmit_data(0xF0);
 			break;
 		default:
 			break;
@@ -172,15 +193,15 @@ void TickFct_pattern2()
 	switch( lightState2 )
 	{
 		case wait2:
-			break;
+		break;
 		case light3:
-			PORTC = transmit_data(pattern | 0xA8);
-			break;
+		transmit_data(pattern | 0xA8);
+		break;
 		case light4:
-			PORTC = transmit_data(0x55);
-			break;
+		transmit_data(0x55);
+		break;
 		default:
-			break;
+		break;
 	}
 }
 void TickFct_pattern3()
@@ -218,15 +239,15 @@ void TickFct_pattern3()
 	switch( lightState3 )
 	{
 		case wait3:
-			pattern3 = transmit_data(0x00);
+			transmit_data(0x00);
 			break;
 		case shift_left:
 			pattern3 = pattern3 << 1;
-			PORTC = transmit_data(pattern3);
+			transmit_data(pattern3);
 			break;
 		case shift_right:
 			pattern3 = pattern3 >> 1;
-			PORTC = transmit_data(pattern3);
+			transmit_data(pattern3);
 			break;
 		default:
 			break;
@@ -239,8 +260,8 @@ void TickFct_pattern4()
 		case wait4:
 			if(pattern == 4)
 				lightState4 = shift_right4;
-			else
-				lightState4 = wait4;
+		else
+			lightState4 = wait4;
 			break;
 		case shift_left4:
 			if(pattern == 4 && pattern4 != 0xF0)
@@ -267,11 +288,11 @@ void TickFct_pattern4()
 			break;
 		case shift_left4:
 			pattern4 = pattern4 << 1;
-			PORTC = transmit_data(pattern4);
+			transmit_data(pattern4);
 			break;
 		case shift_right4:
 			pattern4 = pattern4 >> 1;
-			PORTC = transmit_data(pattern4);
+			transmit_data(pattern4);
 			break;
 		default:
 			break;
@@ -279,62 +300,75 @@ void TickFct_pattern4()
 }
 void Servant_Task()
 {
-	state = s_wait;
+	states = s_wait;
 	for(;;)
 	{
-		TickFct_servant();
+		TickFct_servant(500);
 	}
 }
-void Pattern_Task(unsigned char pattern)
+void Pattern1_Task()
 {
-	while(pattern != 0x00)
+	lightState = wait1;
+	for(;;)
 	{
-		if(pattern == 0x01)
-		{
-			lightState = wait1;
-			while(pattern == 0x01)
-			{
-				TickFct_pattern1();
-			}
-		}
-		if(pattern == 0x02)
-		{
-			lightState2 = wait2;
-			while(pattern == 0x02)
-			{
-				TickFct_pattern2();
-			}
-		}
-		if(pattern == 0x03)
-		{
-			lightState3 = wait3;
-			while(pattern == 0x03)
-			{
-				TickFct_pattern3();
-			}
-		}
-		if(pattern == 0x04)
-		{
-			lightState4 = wait4;
-			while(pattern == 0x04)
-			{
-				TickFct_pattern4();
-			}
-		}
+		TickFct_pattern1(500);
+	}
+}
+void Pattern2_Task()
+{
+	lightState2 = wait2;
+	for(;;)
+	{
+		TickFct_pattern2(500);
+	}
+}
+void Pattern3_Task()
+{
+	lightState3 = wait3;
+	for(;;)
+	{
+		TickFct_pattern3(500);
+	}
+}
+void Pattern4_Task()
+{
+	lightState4 = wait4;
+	for(;;)
+	{
+		TickFct_pattern4(500);
 	}
 }
 void StartSecPulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Servant_Task, (signed portCHAR *)"Servant_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
 }
+void StartSecPulse1(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Pattern1_Task, (signed portCHAR *)"Pattern1_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
+}
+void StartSecPulse2(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Pattern2_Task, (signed portCHAR *)"Pattern2_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
+}
+void StartSecPulse3(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Pattern3_Task, (signed portCHAR *)"Pattern3_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
+}
+void StartSecPulse4(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Pattern4_Task, (signed portCHAR *)"Pattern4_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
+}
+
 int main(void)
 {
-		// SLAVE
-        SPI_ServantInit();
-        DDRC = 0xFF; PORTC = 0x00;
-        DDRA = 0xFF; PORTA = 0x00;
-		StartSecPulse(1);
-		vTaskStartScheduler();
-		
-	return 0;       
+	//SLAVE
+	SPI_ServantInit();
+	DDRC = 0x00; PORTC = 0x00;
+	DDRA = 0xFF; PORTA = 0x00;
+	StartSecPulse(1);
+	StartSecPulse1(1);
+	StartSecPulse2(1);
+	StartSecPulse3(1);
+	StartSecPulse4(1);
+	vTaskStartScheduler();
 }
