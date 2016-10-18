@@ -7,7 +7,6 @@
  *	code, is my own original work.
  */ 
 
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,7 +24,7 @@
 #include "croutine.h"
 #include "bit.h"
 
-int count = 0xFF;
+int count = 0xC7;
 unsigned char receivedData;
 enum masterStates {wait, send} state;
 
@@ -65,14 +64,6 @@ void SPI_MasterTransmit(unsigned char cData) {
 	// set SS high
 	PORTB = SetBit(PORTB,4,1);
 }
-void SPI_ServantInit(void) {
-	// set DDRB to have MISO line as output and MOSI, SCK, and SS as input
-	DDRB = 0x40; PORTB = 0xBF;
-	// set SPCR register to enable SPI and enable SPI interrupt (pg. 168)
-	SPCR |= (1<<SPE) | (1<<SPIE);
-	// make sure global interrupts are enabled on SREG register (pg. 9)
-	SREG = 0x80;
-}
 void TickFct_master() 
 {
 	switch( state ) 
@@ -111,14 +102,11 @@ void StartSecPulse(unsigned portBASE_TYPE Priority)
 }
 int main(void)
 {
-        // MASTER
-        DDRC = 0xF0; PORTC = 0x0F;
-        DDRD = 0xFF; PORTD = 0x00;
-        DDRA = 0xFF; PORTA = 0x00;
-        SPI_MasterInit();
-        
+	// MASTER
+	DDRC = 0xF0; PORTC = 0x0F;
+	DDRD = 0xFF; PORTD = 0x00;
+	SPI_MasterInit();
 	StartSecPulse(1);
 	vTaskStartScheduler();
-		
 	return 0;       
 }
