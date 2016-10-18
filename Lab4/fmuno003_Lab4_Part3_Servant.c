@@ -1,6 +1,6 @@
 /*	Partner(s) Name & E-mail: Francisco Munoz	fmuno003@ucr.edu
  *	Lab Section: 022
- *	Assignment: Lab #4  Exercise #2
+ *	Assignment: Lab #4  Exercise #3
  *	Exercise Description: Servant
  *	
  *	I acknowledge all content contained herein, excluding template or example
