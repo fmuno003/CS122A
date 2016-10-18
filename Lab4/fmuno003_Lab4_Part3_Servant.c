@@ -7,39 +7,18 @@
  *	code, is my own original work.
  */ 
 
-
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
-#include <avr/portpins.h>
-#include <avr/pgmspace.h>
-#include <avr/io.h>
-
 //FreeRTOS include files
 #include "FreeRTOS.h"
 #include "task.h"
 #include "croutine.h"
-#include "bit.h"
-#include "keypad.h"
-#include "lcd.h"
 
-int speeder = 250;
-unsigned char receivedData;
-unsigned char temp;
-unsigned char pattern;
-unsigned char speed;
-unsigned char pattern3 = 0x01;
-unsigned char pattern4 = 0xF0;
+int speeder = 500;
+unsigned char temp, speed, data, pattern, receivedData;
+unsigned char pattern3 = 0x04;
 enum servantStates {s_wait, read} states;
-enum pattern1States {wait1, light1, light2} lightState;
-enum pattern2States {wait2, light3, light4} lightState2;
-enum pattern3States {wait3, shift_left, shift_right} lightState3;
-enum pattern4States {wait4, shift_left4, shift_right4} lightState4;
+enum pattern1States {wait, light1, light2, light3, light4, light5, light6, shift_left, shift_right} lightState;
 
 void SPI_ServantInit(void) {
         // set DDRB to have MISO line as output and MOSI, SCK, and SS as input
@@ -95,29 +74,17 @@ void TickFct_servant()
 			temp = receivedData;
 			speed = temp & 0x0F;
 			if(speed == 0x01)
-			{
 				speeder = 2000;
-			}
 			else if(speed == 0x02)
-			{
 				speeder = 1000;
-			}
 			else if(speed == 0x03)
-			{
 				speeder = 500;
-			}
 			else if(speed == 0x04)
-			{
 				speeder = 250;
-			}
 			else if(speed == 0x05)
-			{
 				speeder = 100;
-			}
 			else if(speed == 0x06)
-			{
 				speeder = 50;
-			}
 			pattern = (temp >> 4) & 0x0F;
 			break;
 		default:
@@ -126,32 +93,78 @@ void TickFct_servant()
 }
 void TickFct_pattern1()
 {
-	switch( lightState )
+	switch(lightState)
 	{
-		case wait1:
+		case wait:
 			if(pattern == 1)
 				lightState = light1;
+			else if(pattern == 2)
+				lightState = light3;
+			else if(pattern == 3)
+				lightState = shift_left;
+			else if(pattern == 4)
+				lightState = light5;
 			else
-				lightState = wait1;
+				lightState = wait;
 			break;
 		case light1:
 			if(pattern != 1)
-				lightState = wait1;
+				lightState = wait;
 			else if(pattern == 1)
 				lightState = light2;
 			break;
 		case light2:
 			if(pattern != 1)
-				lightState = wait1;
+				lightState = wait;
 			else if(pattern == 1)
 				lightState = light1;
+			break;
+		case light3:
+			if(pattern != 2)
+				lightState = wait;
+			else if(pattern == 2)
+				lightState = light4;
+			break;
+		case light4:
+			if(pattern != 2)
+				lightState = wait;
+			else if(pattern == 2)
+				lightState = light3;
+			break;
+		case shift_left:
+			if(pattern == 3 && pattern3 != 0x80)
+				lightState = shift_left;
+			else if(pattern == 3 && pattern3 == 0x80)
+				lightState = shift_right;
+			else if(pattern != 3)
+				lightState = wait;
+			break;
+		case shift_right:
+			if(pattern == 3 && pattern3 != 0x01)
+				lightState = shift_right;
+			else if(pattern == 3 && pattern3 == 0x01)
+				lightState = shift_left;
+			else if(pattern != 3)
+				lightState = wait;
+			break;
+		case light5:
+			if(pattern != 4)
+				lightState = wait;
+			else if(pattern == 4)
+				lightState = light6;
+			break;
+		case light6:
+			if(pattern != 4)
+				lightState = wait;
+			else if(pattern == 4)
+				lightState = light5;
 			break;
 		default:
 			break;
 	}
-	switch( lightState )
+	switch(lightState)
 	{
-		case wait1:
+		case wait:
 			break;
 		case light1:
 			transmit_data(0x0F);
@@ -159,85 +172,11 @@ void TickFct_pattern1()
 		case light2:
 			transmit_data(0xF0);
 			break;
-		default:
-			break;
-	}
-}
-void TickFct_pattern2()
-{
-	switch( lightState2 )
-	{
-		case wait2:
-			if(pattern == 2)
-				lightState2 = light3;
-			else
-				lightState2 = wait2;
-			break;
-		case light3:
-			if(pattern != 2)
-				lightState2 = wait2;
-			else if(pattern == 2)
-				lightState2 = light4;
-			break;
-		case light4:
-			if(pattern != 2)
-				lightState2 = wait2;
-			else if(pattern == 2)
-				lightState2 = light3;
-			break;
-		default:
-			break;
-	}
-	switch( lightState2 )
-	{
-		case wait2:
-			break;
 		case light3:
 			transmit_data(0xAA);
 			break;
 		case light4:
 			transmit_data(0x55);
-			break;
-		default:
-			break;
-	}
-}
-void TickFct_pattern3()
-{
-	switch( lightState3 )
-	{
-		case wait3:
-			if(pattern == 3)
-			{
-				pattern3 = 0x80;
-				lightState3 = shift_right;
-			}
-			else
-				lightState3 = wait3;
-			break;
-		case shift_left:
-			if(pattern == 3 && pattern3 != 0x80)
-				lightState3 = shift_left;
-			else if(pattern ==3 && pattern3 == 0x80)
-				lightState3 = shift_right;
-			else if(pattern != 3)
-				lightState3 = wait3;
-			break;
-		case shift_right:
-			if(pattern == 3 && pattern3 != 0x01)
-				lightState3 = shift_right;
-			else if(pattern == 3 && pattern3 == 0x01)
-				lightState3 = shift_left;
-			else if(pattern != 3)
-				lightState3 = wait3;
-			break;
-		default:
-			break;
-	}
-	switch( lightState3 )
-	{
-		case wait3:
-			transmit_data(0x00);
 			break;
 		case shift_left:
 			pattern3 = pattern3 << 1;
@@ -247,50 +186,11 @@ void TickFct_pattern3()
 			pattern3 = pattern3 >> 1;
 			transmit_data(pattern3);
 			break;
-		default:
+		case light5:
+			transmit_data(0xC3);
 			break;
-	}
-}
-void TickFct_pattern4()
-{
-	switch( lightState4 )
-	{
-		case wait4:
-			if(pattern == 4)
-				lightState4 = shift_right4;
-		else
-			lightState4 = wait4;
-			break;
-		case shift_left4:
-			if(pattern == 4 && pattern4 != 0xF0)
-				lightState4 = shift_left4;
-			else if(pattern == 4 && pattern4 == 0xF0)
-				lightState4 = shift_right4;
-			else if(pattern != 4)
-				lightState4 = wait4;
-			break;
-		case shift_right4:
-			if(pattern == 4 && pattern4 != 0x0F)
-				lightState4 = shift_right4;
-			else if(pattern == 4 && pattern4 == 0x0F)
-				lightState4 = shift_left4;
-			else if(pattern != 4)
-				lightState4 = wait4;
-			break;
-		default:
-			break;
-	}
-	switch( lightState4 )
-	{
-		case wait4:
-			break;
-		case shift_left4:
-			pattern4 = pattern4 << 1;
-			transmit_data(pattern4);
-			break;
-		case shift_right4:
-			pattern4 = pattern4 >> 1;
-			transmit_data(pattern4);
+		case light6:
+			transmit_data(0x3C);
 			break;
 		default:
 			break;
@@ -307,37 +207,10 @@ void Servant_Task()
 }
 void Pattern1_Task()
 {
-	lightState = wait1;
+	lightState = wait;
 	for(;;)
 	{
 		TickFct_pattern1();
-		vTaskDelay(speeder);
-	}
-}
-void Pattern2_Task()
-{
-	lightState2 = wait2;
-	for(;;)
-	{
-		TickFct_pattern2();
-		vTaskDelay(speeder);
-	}
-}
-void Pattern3_Task()
-{
-	lightState3 = wait3;
-	for(;;)
-	{
-		TickFct_pattern3();
-		vTaskDelay(speeder);
-	}
-}
-void Pattern4_Task()
-{
-	lightState4 = wait4;
-	for(;;)
-	{
-		TickFct_pattern4();
 		vTaskDelay(speeder);
 	}
 }
@@ -349,27 +222,12 @@ void StartSecPulse1(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Pattern1_Task, (signed portCHAR *)"Pattern1_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
 }
-void StartSecPulse2(unsigned portBASE_TYPE Priority)
-{
-	xTaskCreate(Pattern2_Task, (signed portCHAR *)"Pattern2_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
-}
-void StartSecPulse3(unsigned portBASE_TYPE Priority)
-{
-	xTaskCreate(Pattern3_Task, (signed portCHAR *)"Pattern3_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
-}
-void StartSecPulse4(unsigned portBASE_TYPE Priority)
-{
-	xTaskCreate(Pattern4_Task, (signed portCHAR *)"Pattern4_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL );
-}
 int main(void)
 {
 	//SLAVE
-	DDRC = 0xFF; PORTC = 0x00;
 	SPI_ServantInit();
+	DDRC = 0xFF; PORTC = 0x00;
 	StartSecPulse(1);
 	StartSecPulse1(1);
-	StartSecPulse2(1);
-	StartSecPulse3(1);
-	StartSecPulse4(1);
 	vTaskStartScheduler();
 }
