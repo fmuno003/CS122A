@@ -7,7 +7,6 @@
  *	code, is my own original work.
  */ 
 
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,10 +24,8 @@
 #include "croutine.h"
 #include "bit.h"
 
-int count = 0xFF;
 unsigned char receivedData;
 enum servantStates {s_wait, read} states;
-
 void transmit_data(unsigned char data) {
 	unsigned char i;
 	for (i = 0; i < 8 ; ++i) {
@@ -53,6 +50,12 @@ void SPI_ServantInit(void) {
 	// make sure global interrupts are enabled on SREG register (pg. 9)
 	SREG = 0x80;
 }
+ISR(SPI_STC_vect) { // this is enabled in with the SPCR register?s ?SPI
+	// Interrupt Enable?
+	// SPDR contains the received data, e.g. unsigned char receivedData =
+	// SPDR;
+	receivedData = SPDR;
+}
 void TickFct_servant() 
 {
 	switch( states )  
@@ -72,8 +75,7 @@ void TickFct_servant()
 		case s_wait:
 			break;
 		case read:
-			receivedData = SPDR;
-			PORTC = transmit_Data(receivedData);
+			transmit_data(receivedData);
 			break;
 		default:
 			break;
@@ -81,7 +83,7 @@ void TickFct_servant()
 }
 void Servant_Task()
 {
-	state = s_wait;
+	states = s_wait;
 	for(;;)
 	{
 		TickFct_servant();
@@ -93,12 +95,10 @@ void StartSecPulse(unsigned portBASE_TYPE Priority)
 }
 int main(void)
 {
-        //SLAVE
-        SPI_ServantInit();
-        DDRC = 0xFF; PORTC = 0x00;
-        DDRA = 0xFF; PORTA = 0x00;
+	//SLAVE
+	DDRC = 0xFF; PORTC = 0x00;
+	SPI_ServantInit();
 	StartSecPulse(1);
 	vTaskStartScheduler();
-		
 	return 0;       
 }
