@@ -6,20 +6,8 @@
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  */
- 
- 
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/eeprom.h>
-#include <avr/portpins.h>
-#include <avr/pgmspace.h>
 
+#include <avr/eeprom.h>
 //FreeRTOS include files
 #include "FreeRTOS.h"
 #include "task.h"
@@ -32,7 +20,7 @@ int power = 0;
 enum Pattern_States{init1, on} state;
 enum Pattern_States2{init2, on2, off2} states;
 enum Pattern_States3{init3, on3, off3} state1;
-enum Button_Press{init, up, down, off, wait} btnState;
+enum Button_Press{init, up, down, turnOff, turnOn, wait1} btnState;
 void transmit_data(unsigned char data)
 {
 	unsigned char i;
@@ -61,29 +49,31 @@ void Tick_Button()
 			else if(power && GetBit(PINA, 1))
 				btnState = down;
 			else if(power && GetBit(PINA, 1) && GetBit(PINA, 0))
-				btnState = off;
+				btnState = turnOff;
+			else if(!power && GetBit(PINA, 1) && GetBit(PINA, 0))
+				btnState = turnOn;
 			else
 				btnState = init;
 			break;
 		case up:
 			if(power && GetBit(PINA, 0))
-				btnState = wait;
+				btnState = wait1;
 			break;
 		case down:
 			if(power && GetBit(PINA, 1))
-				btnState = wait;
+				btnState = wait1;
 			break;
-		case off:
-			if(GetBit(PINA, 0) && GetBit(PINA, 1))
-				btnState = off;
+		case turnOff:
+			if(GetBit(PINA, 0) || GetBit(PINA, 1))
+				btnState = wait1;
 			break;
-		case wait:
-			if(GetBit(PINA, 0) && GetBit(PINA, 1))
+		case wait1:
+			if(!GetBit(PINA, 0) && !GetBit(PINA, 1))
 				btnState = init;
 			break;
-		case off:
-			if(!power && GetBit(PINA, 1) && GetBit(PINA, 0))
-				btnState = init;
+		case turnOn:
+			if(GetBit(PINA, 1) || GetBit(PINA, 0))
+				btnState = wait1;
 			break;
 		default:
 			break;
@@ -100,10 +90,13 @@ void Tick_Button()
 			if(i > 0)
 				--i;
 			break;
-		case off:
-			power = !power;
+		case turnOff:
+			power = 0;
 			break;
-		case wait;
+		case turnOn:
+			power = 1;
+			break;
+		case wait1:
 			break;
 		default:
 			break;
