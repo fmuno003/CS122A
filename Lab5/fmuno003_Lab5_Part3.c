@@ -27,7 +27,7 @@
 unsigned int i = 0;
 unsigned int j = 0;
 unsigned char pattern = 0x01;
-unsigned char pattern = 0x01;
+unsigned char pattern1 = 0x01;
 int power = 0;
 int power1 = 0;
 enum Pattern_States{init1, on} state;
@@ -192,7 +192,7 @@ void Tick1_Button()
 		case turnOff1:
 			power1 = 0;
 			break;
-		case turnOn:1
+		case turnOn:
 			power1 = 1;
 			break;
 		case wait1:
@@ -439,10 +439,10 @@ void Shift_Task()
 void Shift2_Task()
 {
 	
-	btn2State = init;
+	btnState1 = init;
 	for(;;)
 	{
-		Tick2_Button();
+		Tick1_Button();
 		vTaskDelay(250);
 	}
 }
