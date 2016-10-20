@@ -1,6 +1,6 @@
 /*	Partner(s) Name & E-mail: Francisco Munoz
  *	Lab Section: 022
- *	Assignment: Lab #5  Exercise #2 
+ *	Assignment: Lab #5  Exercise #3 
  *	Exercise Description: 
  *	
  *	I acknowledge all content contained herein, excluding template or example
@@ -25,12 +25,19 @@
 #include "bit.h"
 
 unsigned int i = 0;
+unsigned int j = 0;
+unsigned char pattern = 0x01;
 unsigned char pattern = 0x01;
 int power = 0;
+int power1 = 0;
 enum Pattern_States{init1, on} state;
+enum Pattern1_States{init11, on11} State;
 enum Pattern_States2{init2, on2, off2} states;
+enum Pattern1_States2{init22, on22, off22} states2;
 enum Pattern_States3{init3, on3, off3} state1;
+enum Pattern1_States3{init33, on33, off33} state11;
 enum Button_Press{init, up, down, turnOff, wait, turnOn} btnState;
+enum Button1_Press{init01, up1, down1, turnOff1, wait1, turnOn1} btnState1;
 void transmit_data(unsigned char data)
 {
 	unsigned char i;
@@ -69,6 +76,7 @@ void transmit_data1(unsigned char data)
 }
 void Tick_Button()
 {
+	
 	switch(btnState)
 	{
 		case init:
@@ -130,6 +138,69 @@ void Tick_Button()
 			break;
 	}
 }
+void Tick1_Button()
+{
+	switch(btnState1)
+	{
+		case init01:
+			if(power1 && GetBit(PINA, 2))
+				btnState1 = up1;
+			else if(power1 && GetBit(PINA, 3))
+				btnState1 = down1;
+			else if(power1 && GetBit(PINA, 3) && GetBit(PINA, 2))
+				btnState1 = turnOff1;
+			else if(!power1 && GetBit(PINA, 3) && GetBit(PINA, 2))
+				btnState1 = turnOn1;			
+			else
+				btnState1 = init01;
+			break;
+		case up1:
+			if(power1 && GetBit(PINA, 2))
+				btnState1 = wait1;
+			break;
+		case down1:
+			if(power1 && GetBit(PINA, 3))
+				btnState1 = wait1;
+			break;
+		case turnOff1:
+			if(power1 && GetBit(PINA, 2) && GetBit(PINA, 3))
+				btnState1 = init;
+			break;
+		case wait1:
+			if(GetBit(PINA, 2) && GetBit(PINA, 3))
+				btnState1 = init;
+			break;
+		case turnOn1:
+			if(!power1 && GetBit(PINA, 3) && GetBit(PINA, 2))
+				btnState1 = init;
+			break;
+		default:
+			break;
+	}
+	switch(btnState1)
+	{
+		case init01:
+			break;
+		case up1:
+			if(j < 4)
+				++j;
+			break;
+		case down1:
+			if(j > 0)
+				--j;
+			break;
+		case turnOff1:
+			power1 = 0;
+			break;
+		case turnOn:1
+			power1 = 1;
+			break;
+		case wait1:
+			break;
+		default:
+			break;
+	}
+}
 void Tick_Pattern1()
 {
 	switch(state)
@@ -159,6 +230,41 @@ void Tick_Pattern1()
 			for(int j = 255; j > 0; --j)
 			{
 				transmit_data(j);
+			}
+			break;
+		default:
+			break;
+	}
+}
+void Tick1_Pattern1()
+{
+	switch(State)
+	{
+    	case init11:
+			if(j == 0)
+     			State = on11;
+    		break;
+    	case on11:
+			if(j != 0)
+				State = init1;
+			else
+				state = on11;
+			break;
+		default:
+			break;
+	}
+	switch(State)
+	{
+		case init11:
+			break;
+		case on11:
+			for(int k = 0; k < 256; ++k)
+			{
+				transmit_data1(k);
+			}
+			for(int k = 255; j > k; --k)
+			{
+				transmit_data1(k);
 			}
 			break;
 		default:
@@ -196,6 +302,42 @@ void Tick_Pattern2()
 			break;
 		case off2:
 			transmit_data(0x55);
+			break;
+		default:
+			break;
+	}
+}
+void Tick1_Pattern2()
+{
+	switch(states2)
+	{
+		case init22:
+			if(j == 1)
+				states2 = on22;
+			break;
+		case on2:
+			if(j != 1)
+				states2 = init22;
+			else
+				states2 = off22;
+			break;
+		case off2:
+			if(j != 1)
+				states2 = init22;
+			else
+				states2 = on22;
+		default:
+			break;
+	}
+	switch(states2)
+	{
+		case init22:
+			break;
+		case on22:
+			transmit_data1(0xAA);
+			break;
+		case off22:
+			transmit_data1(0x55);
 			break;
 		default:
 			break;
@@ -243,12 +385,64 @@ void Tick_Pattern3()
 			break;
 	}
 }
+void Tick1_Pattern3()
+{
+	switch(state11)
+	{
+		case init33:
+			state11 = on33;
+			break;
+		case on33:
+			if(j != 2)
+				state11 = init33;
+			else if(j == 2 && pattern1 != 0x80)
+				state11 = on33;
+			else if(j == 2 && pattern1 == 0x80)
+				state11 = off33;
+			break;
+		case off33:
+			if(j != 2)
+				state11 = init33;
+			else if(j == 2 && pattern1 != 0x01)
+				state11 = on33;
+			else if(j == 2 && pattern1 == 0x01)
+				state11 = off33;
+			break;
+		default:
+			break;
+	}
+	switch(state11)
+	{
+		case init33:
+			break;
+		case on33:
+			pattern1 = pattern1 << 1;
+			transmit_data1(pattern1);
+			break;
+		case off33:
+			pattern1 = pattern1 >> 1;
+			transmit_data1(pattern1);
+			break;
+		default:
+			break;
+	}
+}
 void Shift_Task()
 {
 	btnState = init;
 	for(;;)
 	{
 		Tick_Button();
+		vTaskDelay(250);
+	}
+}
+void Shift2_Task()
+{
+	
+	btn2State = init;
+	for(;;)
+	{
+		Tick2_Button();
 		vTaskDelay(250);
 	}
 }
@@ -261,12 +455,30 @@ void Pattern1_Task()
 		vTaskDelay(250);
 	}
 }
+void Pattern1_Task1()
+{
+	State = init11;
+	for(;;)
+	{
+		Tick1_Pattern1();
+		vTaskDelay(250);
+	}
+}
 void Pattern2_Task()
 {
 	states = init2;
 	for(;;)
 	{
 		Tick_Pattern2();
+		vTaskDelay(250);
+	}
+}
+void Pattern2_Task1()
+{
+	states = init22;
+	for(;;)
+	{
+		Tick1_Pattern2();
 		vTaskDelay(250);
 	}
 }
@@ -279,21 +491,46 @@ void Pattern3_Task()
 		vTaskDelay(250);
 	}
 }
+void Pattern3_Task1()
+{
+	state1 = init33;
+	for(;;)
+	{
+		Tick1_Pattern3();
+		vTaskDelay(250);
+	}
+}
 void StartShiftPulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Shift_Task, (signed portCHAR *)"Shift_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+}
+void Start1ShiftPulse(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Shift2_Task, (signed portCHAR *)"Shift2_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 void StartPatternPulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Pattern1_Task, (signed portCHAR *)"Pattern1_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
+void Start1PatternPulse(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Pattern1_Task1, (signed portCHAR *)"Pattern1_Task1", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+}
 void StartPattern1Pulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Pattern2_Task, (signed portCHAR *)"Pattern2_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
+void Start1Pattern1Pulse(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Pattern2_Task1, (signed portCHAR *)"Pattern2_Task1", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+}
 void StartPattern2Pulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Pattern3_Task, (signed portCHAR *)"Pattern3_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+}
+void Start1Pattern2Pulse(unsigned portBASE_TYPE Priority)
+{
+	xTaskCreate(Pattern3_Task1, (signed portCHAR *)"Pattern3_Task1", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 int main()
 {
@@ -304,6 +541,10 @@ int main()
 	StartPatternPulse(1);
 	StartPattern1Pulse(1);
 	StartPattern2Pulse(1);
+	Start1ShiftPulse(1);
+	Start1PatternPulse(1);
+	Start1Pattern1Pulse(1);
+	Start1Pattern2Pulse(1);
 	vTaskStartScheduler();
 	return 0;
 }
