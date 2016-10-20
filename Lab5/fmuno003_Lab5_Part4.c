@@ -22,7 +22,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "croutine.h"
-#include "bit.h"
 
 unsigned short LED = 0x0010;
 enum LED_States{shiftLeft, shiftRight} LEDstate;
@@ -57,12 +56,13 @@ void Tick_LED()
 			if(LED != 0x0001)
 				LEDstate = shiftRight;
 			else if(LED == 0x0001)
-				LEDstate = shiftleft;
+				LEDstate = shiftLeft;
 			break;
 		default: 
 			break;
 	}
 	switch(LEDstate)
+	{
 		case shiftLeft:
 			LED = LED << 1;
 			transmit_data(LED);
@@ -73,6 +73,8 @@ void Tick_LED()
 			break;
 		default:
 			break;
+	}
+}
 void Shift_Task()
 {
 	LEDstate = shiftLeft;
@@ -89,7 +91,8 @@ void StartShiftPulse(unsigned portBASE_TYPE Priority)
 int main()
 {
 	DDRC = 0xFF; PORTC = 0x00;
+	
 	StartShiftPulse(1);
-	vTaskStartScheduler;
+	vTaskStartScheduler();
 	return 0;
 }
