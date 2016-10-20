@@ -6,24 +6,12 @@
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  */
-
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
 #include <avr/eeprom.h>
-#include <avr/portpins.h>
-#include <avr/pgmspace.h>
-
 //FreeRTOS include files
 #include "FreeRTOS.h"
 #include "task.h"
 #include "croutine.h"
-#include "usart_ATmega1284.h"
+#include "bit.h"
 
 void transmit_data(unsigned char data) 
 {
@@ -46,89 +34,65 @@ void transmit_data(unsigned char data)
 
 unsigned char temp = 0x00;
 unsigned char toggler = 0x00;
-enum Shift_Registers {increment, decrement, wait, pause, toggle} state;
+enum Shift_Registers {increment, decrement, wait, pause, reset} state;
 void Shift_Register_Tick()
 {
     switch(state)
     {
         case wait:
-            if(~PINA & 0x01 == 0x01)
-            {
+            if(GetBit(PINA, 0))
                 state = increment;
-            }
-            else if (~PINA & 0x02 == 0x02)
-            {
+            else if (GetBit(PINA, 1))
                 state = decrement;
-            }
-            else if(~PINA & 0x03 == 0x03)
-            {
-              state = toggle;
-            }
+            else if(GetBit(PINA, 0) && GetBit(PINA, 1))
+				state = reset;
             break;
        case increment:
-            if(~PINA & 0x01 == 0x01)
-            {
+            if(GetBit(PINA, 0))
                 state = pause;
-            }
             else
-            {
                 state = wait;
-            }
             break;
        case decrement:
-            if(~PINA & 0x02 == 0x02)
-            {
-              state = pause;
-            }
+            if(GetBit(PINA, 1))
+				state = pause;
             else
-            {
-              state = wait;
-            }
+				state = wait;
             break;
        case pause:
-            if(~PINA == 0x00)
-            {
-              state = wait;
-            }
+            if(!GetBit(PINA, 0) || !GetBit(PINA, 1))
+				state = wait;
             break;
-        case toggle:
-            state = wait;
+        case reset:
+			if(GetBit(PINA, 0) || GetBit(PINA, 1))
+				state = pause;
             break;
         default:
             break;
     }
-    switch(state):
+    switch(state)
+	{
         case wait:
             break;
         case increment:
             if(temp != 0xFF)
-            {
-               temp++;
-               transmit_data(temp);
-            }
+				temp++;
+				transmit_data(temp);
             break;
         case decrement:
             if(temp != 0x00)
-            {
-              temp--;
-              transmit_data(temp);
-            }
+				temp--;
+				transmit_data(temp);
+			break;
         case pause:
+			break;
+        case reset:
+			temp = 0x00;
+			transmit_data(0x00);
             break;
-        case toggle:
-            if(toggler == 0)
-            {
-                toggler = 1;
-                transmit_data(temp);
-            }
-            else
-            {
-                toggler = 0;
-                transmit_data(toggler);
-             }
-             break;
         default:
-            break;
+			break;
+	}
 }
 void Shift_Task()
 {
@@ -148,6 +112,6 @@ int main()
     DDRC = 0x00; PORTC = 0xFF;
     
     StartShiftPulse(1);
-    vStartScheduler();
+    vTaskStartScheduler();
     return 0;
 }
