@@ -36,7 +36,7 @@ enum Pattern_States2{init2, on2, off2} states;
 enum Pattern1_States2{init22, on22, off22} states2;
 enum Pattern_States3{init3, on3, off3} state1;
 enum Pattern1_States3{init33, on33, off33} state11;
-enum Button_Press{init, up, down, turnOff, wait, turnOn} btnState;
+enum Button_Press{init, up, down, turnOff, wait11, turnOn} btnState;
 enum Button1_Press{init01, up1, down1, turnOff1, wait1, turnOn1} btnState1;
 void transmit_data(unsigned char data)
 {
@@ -93,17 +93,17 @@ void Tick_Button()
 			break;
 		case up:
 			if(power && GetBit(PINA, 0))
-				btnState = wait;
+				btnState = wait11;
 			break;
 		case down:
 			if(power && GetBit(PINA, 1))
-				btnState = wait;
+				btnState = wait11;
 			break;
 		case turnOff:
 			if(power && GetBit(PINA, 0) && GetBit(PINA, 1))
 				btnState = init;
 			break;
-		case wait:
+		case wait11:
 			if(GetBit(PINA, 0) && GetBit(PINA, 1))
 				btnState = init;
 			break;
@@ -132,7 +132,7 @@ void Tick_Button()
 		case turnOn:
 			power = 1;
 			break;
-		case wait:
+		case wait11:
 			break;
 		default:
 			break;
