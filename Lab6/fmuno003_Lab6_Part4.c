@@ -1,6 +1,6 @@
 /*	Partner(s) Name & E-mail: Francisco Munoz	fmuno003@ucr.edu
  *	Lab Section: 022
- *	Assignment: Lab #6  Exercise #3 
+ *	Assignment: Lab #6  Exercise #4 
  *	Exercise Description: 
  *	
  *	I acknowledge all content contained herein, excluding template or example
@@ -236,9 +236,6 @@ void BTN_Task()
 void StartShiftPulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(LED_Task, (signed portCHAR *)"LED_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
-}
-void StartShiftPulse1(unsigned portBASE_TYPE Priority)
-{
 	xTaskCreate(BTN_Task, (signed portCHAR *)"BTN_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 int main(void)
@@ -248,7 +245,6 @@ int main(void)
 	DDRD = 0xFF; PORTD = 0x00;
 	
 	StartShiftPulse(1);
-	StartShiftPulse1(1);
 	vTaskStartScheduler();
 	return 0;	
 }
