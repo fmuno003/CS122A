@@ -34,7 +34,7 @@ void transmit_data(unsigned char data)
 		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
 		PORTC |= 0x04;
 	}
-	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
+	// set RCLK = 1. Rising edge copies data from the â€œShiftâ€ register to the â€œStorageâ€ register
 	PORTC |= 0x02;
 	// clears all lines in preparation of a new transmission
 	PORTC = 0x00;
@@ -52,7 +52,7 @@ void transmit_data1(unsigned char data)
 		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
 		PORTD |= 0x04;
 	}
-	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
+	// set RCLK = 1. Rising edge copies data from the â€œShiftâ€ register to the â€œStorageâ€ register
 	PORTD |= 0x02;
 	// clears all lines in preparation of a new transmission
 	PORTD = 0x00;
@@ -167,8 +167,6 @@ void readBtn_Tick()
 }
 void Demo_Tick()
 {
-	static unsigned char pattern = 0x80;
-	static unsigned char row = 0x00;
 	switch(LEDstate)
 	{
 		case init:
@@ -214,8 +212,8 @@ void Demo_Tick()
 		default:
 			break;
 	}
-			transmit_data(pattern);		// Pattern to display
-			transmit_data1(row);		// Row(s) displaying pattern
+			transmit_data(p);		// Pattern to display
+			transmit_data1(r);		// Row(s) displaying pattern
 }
 void LED_Task()
 {
