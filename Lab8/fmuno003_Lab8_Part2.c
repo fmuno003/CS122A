@@ -24,64 +24,80 @@ void Motor_Tick()
 		case A:
 			if(!direction && numPhases > 0)
 				state = AB;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = DA;
-			else if(GetBit(PINB, 1))
+				numPhases--;
+			else 
 				state = A;
 			break;
 		case AB:
 			if(!direction && numPhases > 0)
 				state = B;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = A;
+				numPhases--;
 			else
 				state = AB;
 			break;
 		case B:
 			if(!direction && numPhases > 0)
 				state = BC;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = AB;
+				numPhases--;
 			else
 				state = B;
 			break;
 		case BC:
 			if(!direction && numPhases > 0)
 				state = C;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = B;
+				numPhases--;
 			else
 				state = BC;
 			break;
 		case C:
 			if(!direction && numPhases > 0)
 				state = CD;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = BC;
+				numPhases--;
 			else
 				state = C;
 			break;
 		case CD:
 			if(!direction && numPhases > 0)
 				state = D;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = C;
+				numPhases--;
 			else
 				state = CD;
 			break;
 		case D:
 			if(!direction && numPhases > 0)
 				state = DA;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = CD;
+				numPhases--;
 			else
 				state = D;
 			break;
 		case DA:
 			if(!direction && numPhases > 0)
 				state = A;
+				numPhases--;
 			else if(direction && numPhases > 0)
 				state = D;
+				numPhases--;
 			else
 				state = DA;
 			break;
