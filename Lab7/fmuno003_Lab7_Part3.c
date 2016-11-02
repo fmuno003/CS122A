@@ -15,22 +15,10 @@
 
 unsigned int speeder = 1000;
 unsigned short joystick = 0x0000;
-unsigned char pattern = 0x00;
+unsigned char pattern = 0x01;
 enum JoystickStates{wait, left, right} state;
 enum LEDMatrixStates{display} LEDstate;
 
-void transmit_data(unsigned char data)
-{
-	unsigned char i;
-	for(i = 0; i < 8; ++i)
-	{
-		PORTC = 0x08;
-		PORTC |= ((data >> i) & 0x01);
-		PORTC |= 0x04;
-	}
-	PORTC |= 0x02;
-	PORTC = 0x00;
-}
 void A2D_init()
 {
 	ADCSRA |= (1 << ADEN) | (1 << ADSC) | (1 << ADATE);
@@ -152,9 +140,9 @@ void JoyStick_Tick()
 			break;
 		case right:
 			if(pattern == 0x01)
-				pattern = 0x01;
+				pattern = 0x80;
 			else
-				pattern = pattern << 1;
+				pattern = pattern >> 1;
 		break;
 	}
 }
@@ -179,8 +167,8 @@ void LEDMatrix_Tick()
 	switch(LEDstate)
 	{
 		case display:
-		transmit_data(pattern);
-		PORTD = ~0x01;
+		PORTD = pattern;
+		PORTC = ~0x01;
 		break;
 		default:
 		break;
@@ -192,7 +180,7 @@ void LEDMatrix_Task()
 	for(;;)
 	{
 		LEDMatrix_Tick();
-		vTaskDelay(250);
+		vTaskDelay(100);
 	}
 }
 void StartShiftPulse(unsigned portBASE_TYPE Priority)
