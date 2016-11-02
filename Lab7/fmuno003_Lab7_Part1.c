@@ -7,12 +7,14 @@
  *	code, is my own original work.
  */
 
+#include <avr/io.h>
 //FreeRTOS include files
 #include "FreeRTOS.h"
 #include "task.h"
 #include "croutine.h"
 #include "bit.h"
 
+unsigned short temp = 0;
 enum DisplayStates{init} state;
 void A2D_init() 
 {
@@ -22,11 +24,18 @@ void A2D_init()
 	// ADATE: Enables auto-triggering, allowing for constant
 	//	    analog to digital conversions.
 }
+void convert()
+{
+	ADCSRA |=(1<<ADSC);//start ADC conversion
+	while ( !(ADCSRA & (1<<ADIF)));//wait till ADC conversion
+	
+}
 void Display_Tick()
 {
 	switch(state)
 	{
 		case init:
+			state = init;
 			break;
 		default:
 			break;
@@ -34,8 +43,10 @@ void Display_Tick()
 	switch(state)
 	{
 		case init:
-			transmit_data(ADC);
-			transmit_data1(ADC >> 8);
+			convert();
+			temp = ADC;
+			PORTC = temp;
+			PORTD = temp >> 8;
 			break;
 		default:
 			break;
@@ -47,18 +58,20 @@ void A2D_Task()
 	for(;;)
 	{
 		Display_Tick();
-		vTaskDelay(1);
+		vTaskDelay(100);
 	}
 }
 void StartShiftPulse(unsigned portBASE_TYPE Priority)
 {
-	xTaskCreate(LED_Task, (signed portCHAR *)"LED_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+	xTaskCreate(A2D_Task, (signed portCHAR *)"A2D_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 int main(void)
 {
+	A2D_init();
 	DDRA = 0x00; PORTA = 0xFF;
 	DDRB = 0xFF; PORTB = 0x00;
 	DDRC = 0xFF; PORTC = 0x00;
 	DDRD = 0xFF; PORTD = 0x00;
-	A2D_init();
+	StartShiftPulse(1);
+	vTaskStartScheduler();
 }
