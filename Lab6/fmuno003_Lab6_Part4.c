@@ -7,6 +7,7 @@
  *	code, is my own original work.
  */
 
+#include <avr/io.h>
 //FreeRTOS include files
 #include "FreeRTOS.h"
 #include "task.h"
@@ -14,6 +15,8 @@
 #include "bit.h"
 
 unsigned int j;
+unsigned int downpress = 1;
+unsigned int uppress = 1;
 static unsigned char p;
 static unsigned char r;
 unsigned char pattern[4] = {0x20, 0x10, 0x08, 0x04};
@@ -21,42 +24,6 @@ unsigned char row[4] = {0xF1, 0xF5, 0xF5, 0xF1};
 enum DemoStates{init, s1, s2, s3, s4} LEDstate;
 enum readBtn{btn, left, right, up, down, hold_left,hold_right, hold_up, hold_down} btnState;
 
-void transmit_data(unsigned char data)
-{
-	unsigned char i;
-	for (i = 0; i < 8 ; ++i)
-	{
-		// Sets SRCLR to 1 allowing data to be set
-		// Also clears SRCLK in preparation of sending data
-		PORTC = 0x08;
-		// set SER = next bit of data to be sent.
-		PORTC |= ((data >> i) & 0x01);
-		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
-		PORTC |= 0x04;
-	}
-	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
-	PORTC |= 0x02;
-	// clears all lines in preparation of a new transmission
-	PORTC = 0x00;
-}
-void transmit_data1(unsigned char data)
-{
-	unsigned char i;
-	for (i = 0; i < 8 ; ++i)
-	{
-		// Sets SRCLR to 1 allowing data to be set
-		// Also clears SRCLK in preparation of sending data
-		PORTD = 0x08;
-		// set SER = next bit of data to be sent.
-		PORTD |= ((data >> i) & 0x01);
-		// set SRCLK = 1. Rising edge shifts next bit of data into the shift register
-		PORTD |= 0x04;
-	}
-	// set RCLK = 1. Rising edge copies data from the “Shift” register to the “Storage” register
-	PORTD |= 0x02;
-	// clears all lines in preparation of a new transmission
-	PORTD = 0x00;
-}
 void readBtn_Tick()
 {
 	switch(btnState) 
@@ -76,14 +43,18 @@ void readBtn_Tick()
 		case hold_up:
 			if(!GetBit(PINA,0))
 				btnState = hold_up;
-			else 
+			else if(uppress != 0)
 				btnState = up;
+			else 
+				btnState = btn;
 			break;
 		case hold_down:
 			if(!GetBit(PINA,1))
 				btnState = hold_down;
-			else 
+			else if(downpress != 0)
 				btnState = down;
+			else
+				btnState = btn;
 			break;
 		case hold_right:
 			if(!GetBit(PINA,2))
@@ -94,7 +65,7 @@ void readBtn_Tick()
 		case hold_left:
 			if(!GetBit(PINA,3))
 				btnState = hold_left;
-			else 
+			else
 				btnState = left;
 			break;
 		case up:
@@ -144,22 +115,26 @@ void readBtn_Tick()
 			}
 			break;
 		case up:
-			if( GetBit(PORTD,0) ) 
+			if( uppress != 0 ) 
 			{
 				for(j = 0; j < 4; j++) 
 				{
 					row[j] = ~(~row[j] >> 1);
 				}
 			}
+			++downpress;
+			--uppress;
 			break;
 		case down:
-			if( GetBit(PORTD,4) ) 
+			if( downpress != 0) 
 			{
 				for(j = 0; j < 4; j++) 
 				{
 					row[j] = ~(~row[j] << 1);
 				}
 			}
+			++uppress;
+			--downpress;
 			break;
 		default:
 			break;
@@ -212,8 +187,8 @@ void Demo_Tick()
 		default:
 			break;
 	}
-			transmit_data(p);		// Pattern to display
-			transmit_data1(r);		// Row(s) displaying pattern
+			PORTD = p;		// Pattern to display
+			PORTC = r;		// Row(s) displaying pattern
 }
 void LED_Task()
 {
