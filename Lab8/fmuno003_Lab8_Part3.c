@@ -12,7 +12,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "croutine.h"
-#include "bit.h"
 #include "keypad.h"
 
 int numPhases = 0;
@@ -20,7 +19,7 @@ int degrees = 0;
 static int j = 0;
 unsigned char direction = 0;
 unsigned char keypad = 0x00;
-unsigned char array[4];
+unsigned char array[4] = {'0', '0', '0', '0'};
 enum motorStates{A, AB, B, BC, C, CD, D, DA} state;
 enum ButtonStates{wait, read} btnState;
 void Button_Tick()
@@ -28,13 +27,15 @@ void Button_Tick()
 	switch(btnState)
 	{
 		case wait:
+			PORTD = 0x01;
 			keypad = GetKeypadKey();
-			if(keypad == '\0' || keypad == 'A' || keypad == 'B' || keypad == 'C' || keypad == 'D')
-				btnState = wait;
-			else
+			if(keypad != '\0' || keypad != 'A' || keypad != 'B' || keypad != 'C' || keypad != 'D')
 				btnState = read;
+			else
+				btnState = wait;
 			break;
 		case read:
+			PORTD = 0x02;
 			btnState = wait;
 			break;
 		default:
@@ -47,7 +48,7 @@ void Button_Tick()
 		case read:
 			array[j] = keypad;
 			++j;
-			if(keypad == '#' || j >= 4)
+			if(keypad == '#' || j > 3)
 			{
 				degrees = atoi(array);
 				numPhases = (degrees/5.625) * 64;
@@ -213,7 +214,7 @@ void Motor_Task()
 	for(;;)
 	{
 		Motor_Tick();
-		vTaskDelay(200);
+		vTaskDelay(20);
 	}
 }
 void Button_Task()
@@ -233,7 +234,8 @@ void StartShiftPulse(unsigned portBASE_TYPE Priority)
 int main(void)
 {
 	DDRA = 0xFF; PORTA = 0x00;
-	DDRB = 0x00; PORTB = 0xFF;
+	DDRC = 0xF0; PORTC = 0x0F;
+	DDRD = 0xFF; PORTD = 0x00;
 	StartShiftPulse(1);
 	vTaskStartScheduler();
 }
