@@ -58,6 +58,14 @@ void Motor_Tick()
 			else if(GetBit(PINB, 1))
 				state = CD;
 			break;
+		case CD:
+			if((GetBit(PINB, 0) && GetBit(PINB, 1)) || (!GetBit(PINB, 0) && !GetBit(PINB, 1)))
+				state = CD;
+			else if(GetBit(PINB, 0))
+				state = C;
+			else if(GetBit(PINB, 1))
+				state = D;
+			break;
 		case D:
 			if((GetBit(PINB, 0) && GetBit(PINB, 1)) || (!GetBit(PINB, 0) && !GetBit(PINB, 1)))
 				state = D;
@@ -80,28 +88,28 @@ void Motor_Tick()
 	switch(state)
 	{
 		case A:
-			PORTA = 0x11;
+			PORTA = 0x01;
 			break;
 		case AB:
-			PORTA = 0x33;
+			PORTA = 0x03;
 			break;
 		case B:
-			PORTA = 0x22;
+			PORTA = 0x02;
 			break;
 		case BC:
-			PORTA = 0x66;
+			PORTA = 0x06;
 			break;
 		case C:
-			PORTA = 0x44;
+			PORTA = 0x04;
 			break;
 		case CD:
-			PORTA = 0xCC;
+			PORTA = 0x0C;
 			break;
 		case D:
-			PORTA = 0x88;
+			PORTA = 0x08;
 			break;
 		case DA:
-			PORTA = 0x99;
+			PORTA = 0x09;
 			break;
 		default:
 			break;
@@ -113,7 +121,7 @@ void Motor_Task()
 	for(;;)
 	{
 		Motor_Tick();
-		vTaskDelay(200);
+		vTaskDelay(20);
 	}
 }
 void StartShiftPulse(unsigned portBASE_TYPE Priority)
