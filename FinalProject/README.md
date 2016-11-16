@@ -1,7 +1,7 @@
 # UCR CS 122A Final Project
 
 -------------------------------
-Project Title: Life Alert
+__Project Title: Life Alert__
 
 Partner 1: Francisco Munoz
 
