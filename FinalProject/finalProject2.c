@@ -22,9 +22,59 @@
 #include "FreeRTOS.h"
 #include "tasks.h"
 #include "croutine.h"
+#include "usart_ATmega1284.h"
 
-enum BluetoothModule{init, wait2, send} blueState;
+enum BluetoothModule{wait, send} blueState;
+enum ReceiveData{wait2, receive} receiveState;
 
+unsigned short temperature = 0x0000;
+unsigned short heartbeat = 0x0000;
+
+unsigned char receiveData()
+{
+	unsigned char temp = 0;
+	while(1)
+	{
+		if(USART_HasReceived(0))
+		{
+			temp = USART_Receive(0);
+			return temp;
+		}
+	}
+}
+void sendData(unsigned char x)
+{
+	unsigned char hasSent = 0;
+	while(!hasSent)
+	{
+		if(USART_IsSendReady(1))
+		{
+			USART_Send(x, 1);
+			hasSent = 1;
+		}
+	}
+}
+void Receive_Tick()
+{
+	switch(receiveState) // transitions
+	{
+		case wait2:
+			break;
+		case receive:
+			break;
+		default:
+			break;
+	}
+	switch(receiveState) // actions
+	{
+		case wait2:
+			break;
+		case receive:
+			break;
+		default:
+			break;
+	}
+}
 void Bluetooth_Tick()
 {
 	switch(blueState) // transitions
@@ -45,13 +95,25 @@ void Bluetooth_Task()
 		vTaskDelay(100);
 	}
 }
+void Receive_Task()
+{
+	receiveState = wait2;
+	for(;;)
+	{
+		Receive_Tick();
+		vTaskDelay(100);
+	}
+}
 void StartFinalPulse(unsigned portBASE_TYPE priority)
 {
 	xTaskCreate(Bluetooth_Task, (signed portCHAR *) "Bluetooth_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+	XTaskCreate(Receive_Task, (signed portCHAR *) "Receive_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 int main(void)
 {
+	// USART
 	DDRD = 0x00; PORTD = 0x00;
+	
 	StartFinalPulse(1);
 	vTaskStartScheduler();
 }
