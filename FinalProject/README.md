@@ -2,6 +2,7 @@
 
 -------------------------------
 Project Title: Life Alert
+
 Partner 1: Francisco Munoz
 
 ------------------------------
