@@ -232,11 +232,10 @@ int main(void)
 {
 	ADC_init;
 	// Temperature Sensor
-	DDRA = 0x00; PORTA = 0x00;
 	// Heart Rate Sensor
-	DDRB = 0x00; PORTB = 0x00;
 	// Reflectance Sensor
-	DDRC = 0x00; PORTC = 0x00;
+	DDRA = 0x00; PORTA = 0x00;
+	
 	//USART
 	DDRD = 0x00; PORTD = 0x00;
 	
