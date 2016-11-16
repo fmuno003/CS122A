@@ -24,14 +24,17 @@
 #include "croutine.h"
 
 unsigned short reflectSensor = 0x0000;
-int temperatureSensor = 0;
+unsigned short temperatureSensor = 0;
 unsigned short pulseSensor = 0x0000;
 float temperature = 0.0;
+int heartbeat = 0;
+int power = 0;
 
-enum ReflectanceSensor {wait, read} state;
-enum PulseSensor{wait1, read1} pulseState;
-enum TemperatureSensor{pause, readIn, calculate} tempState;
-
+enum ReflectanceSensor {read} state;
+enum PulseSensor{hold, process} pulseState;
+enum TemperatureSensor{pause, readIn} tempState;
+enum USARTCommunication{wait, send} usartState;
+	
 void ADC_init()
 {
 	ADCSRA |= (1 << ADEN) | (1 << ADSC) | (1 << ADATE);
@@ -39,30 +42,84 @@ void ADC_init()
 	// ADSC: Starts analog-to-digital conversion
 	// ADATE: Enables auto-triggering, allowing for constant analog to digital conversions.
 }
-float degreeConversion(int temperatureSensor, int selection)
+void sendData(unsigned char x)
 {
-	if(selection == 1) // Conversion to Fahrenheit
+	unsigned char hasSent = 0;
+	while(!hasSent)
 	{
-		
+		if(USART_IsSendReady(0))
+		{
+			USART_Send(x, 0);
+			hasSent = 1;
+		}
 	}
-	else if(selection == 2) // Conversion to Celsius
+}
+int heartConversion(unsigned short pulseSensor)
+{
+	
+}
+float degreeConversion(unsigned short temperatureSensor)
+{
+	
+}
+char hexConversion(unsigned int heartbeat)
+{
+	// convert from int to hexadecimal
+}
+char hexaConversion(float temperature)
+{
+	// convert float to hexadecimal
+}
+void USART_Tick()
+{
+	switch(usartState)
 	{
-		
+		case wait:
+			if(power == 0)
+				usartState = wait;
+			else if(power == 1)
+				usartState = send;
+			break;
+		case send:
+			if(power == 1)
+				usartState = send;
+			else if(power == 0)
+				usartState = wait;
+			break;
+		default:
+			break;
 	}
-	else if(selection == 3) // Conversion to Kelvin
+	switch(usartState)
 	{
-		
+		case wait:
+			break;
+		case send:
+			// convert then send data
+			break;
+		default: 
+			break;
 	}
 }
 void Reflectance_Tick()
 {
 	switch(state) //transitions
 	{
+		case read:
+			state = read;
+			break;
 		default:
+			state = read;
 			break;
 	}
 	switch(state) // actions
 	{
+		case read:
+			reflectSensor = ADC;
+			if(reflectSensor == 0x0000)
+				power = 0;
+			else if(reflectSensor = 0x0000)
+				power = 1;
+			break;
 		default:
 			break;
 	}
@@ -71,11 +128,29 @@ void Pulse_Tick()
 {
 	switch(pulseState) // transitions
 	{
+		case hold:
+			if(power == 0)
+				pulseState = hold;
+			else if(power == 1)
+				pulseState = process;
+			break;
+		case process:
+			if(power == 1)
+				pulseState = process;
+			else if(power == 0)
+				pulseState = hold;
+			break;
 		default:
+			pulseState = hold;
 			break;
 	}
 	switch(pulseState) // actions
 	{
+		case hold:
+			break;
+		case process:
+			pulseSensor = ADC;
+			heartbeat = heartConversion();
 		default:
 			break;
 	}
@@ -84,18 +159,35 @@ void Temperature_Tick()
 {
 	switch(tempState) // transitions
 	{
+		case wait:
+			if(power == 0)
+				tempState = pause;
+			else if (power == 1)
+				tempState = readIn;
+			break;
+		case readIn:
+			if(power == 1)
+				tempState = readIn;
+			else if(power == 0)
+				tempState = pause;
 		default:
+			tempState = pause;
 			break;
 	}
 	switch(tempState) // actions
 	{
+		case pause:
+			break;
+		case readIn:
+			TemperatureSensor = ADC;
+			temperature = degreeConversion(TemperatureSensor);
 		default:
 			break;
 	}
 }
 void Reflectance_Task()
 {
-	state = wait;
+	state = read;
 	for(;;)
 	{
 		Reflectance_Tick();
@@ -104,7 +196,7 @@ void Reflectance_Task()
 }
 void Pulse_Task()
 {
-	pulseState = wait1;
+	pulseState = hold;
 	for(;;)
 	{
 		Pulse_Tick();
@@ -120,11 +212,21 @@ void Temperature_Task()
 		vTaskDelay(100);
 	}
 }
+void USART_Task()
+{
+	usartState = wait;
+	for(;;)
+	{
+		USART_Tick();
+		vTaskDelay(100);
+	}
+}
 void StartFinalPulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Reflectance_Task, (signed portCHAR *) "Reflectance_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 	xTaskCreate(Pulse_Task, signed portCHAR *) "Pulse_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 	xTaskCreate(Temperature_Task, signed portCHAR *) "Temperature_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+	xTaskCreate(USART_Task, signed portCHAR *) "USART_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 int main(void)
 {
