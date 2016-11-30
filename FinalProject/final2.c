@@ -25,10 +25,10 @@
 #include "usart_ATmega1284.h"
 
 enum BluetoothModule{wait, send} blueState;
-enum ReceiveData{wait2, receive} receiveState;
+enum ReceiveData{receive} receiveState;
 
-unsigned short temperature = 0x0000;
-unsigned short heartbeat = 0x0000;
+unsigned char temperature = 0x00;
+unsigned char heartbeat = 0x00;
 
 unsigned char receiveData()
 {
@@ -58,18 +58,18 @@ void Receive_Tick()
 {
 	switch(receiveState) // transitions
 	{
-		case wait2:
-			break;
 		case receive:
+			receiveState = receive;
 			break;
 		default:
+			receiveState = receive;
 			break;
 	}
 	switch(receiveState) // actions
 	{
-		case wait2:
-			break;
 		case receive:
+			temperature = receiveData();
+			heartbeat = receiveData();
 			break;
 		default:
 			break;
@@ -88,7 +88,7 @@ void Bluetooth_Tick()
 }
 void Bluetooth_Task()
 {
-	blueState = wait2;
+	blueState = wait;
 	for(;;)
 	{
 		Bluetooth_Tick();
@@ -112,7 +112,7 @@ void StartFinalPulse(unsigned portBASE_TYPE priority)
 int main(void)
 {
 	// USART
-	DDRD = 0x00; PORTD = 0x00;
+	DDRD = 0xFF; PORTD = 0x00;
 	
 	StartFinalPulse(1);
 	vTaskStartScheduler();

@@ -23,12 +23,11 @@
 #include "tasks.h"
 #include "croutine.h"
 
-unsigned short reflectSensor = 0x0000;
-unsigned short temperatureSensor = 0;
-unsigned short pulseSensor = 0x0000;
+unsigned short reflectSensor, temperatureSensor, temperatureSensor2, pulseSensor = 0x0000;
+unsigned char pulseRate, tempRate;
 float temperature = 0.0;
-int heartbeat = 0;
-int power = 0;
+int heartbeat, heart, power, counter = 0;
+char hexNumber[100];
 
 enum ReflectanceSensor {read} state;
 enum PulseSensor{hold, process} pulseState;
@@ -54,21 +53,41 @@ void sendData(unsigned char x)
 		}
 	}
 }
-int heartConversion(unsigned short pulseSensor)
+int heartConversion(int heartRate)
 {
-	
+	int temp = 0;
+	temp = heartRate * 12;
+	return temp;
 }
-float degreeConversion(unsigned short temperatureSensor)
+char hexConversion(int decimal)
 {
-	
+	int temp;
+	while (decimal != 0){
+	temp = decimal % 16;
+	if(temp < 10)
+		temp += 48;
+	else
+		temp += 55;
+	hexNumber[++i] = temp;
+	decimal = decimal / 16;
+	}
+	return hexNumber;
 }
-char hexConversion(unsigned int heartbeat)
+int degreeConversion(unsigned short temperatureSensor, unsigned short temperatureSensor2)
 {
-	// convert from int to hexadecimal
+	float temp, temp2 = 0.0;
+	int realTemp = 0;
+	temp = (1.8 * (temperatureSensor / 9.31)) + 32;
+	temp2 = (1.8 * (temperatureSensor2 / 9.31)) + 32;
+	realTemp = (temp + temp2) / 2;
+	return realTemp;
 }
-char hexaConversion(float temperature)
+void Set_A2D_PIN(unsigned char pinNum)
 {
-	// convert float to hexadecimal
+	ADMUX = (pinNum <= 0x07) ? pinNum : ADMUX;
+	// Allow channel to stabilize
+	static unsigned char i = 0;
+	for(i = 0; i < 15; ++i){asm("nop");}
 }
 void USART_Tick()
 {
@@ -94,7 +113,10 @@ void USART_Tick()
 		case wait:
 			break;
 		case send:
-			// convert then send data
+			pulseRate = hexConversion(heart);
+			tempRate = hexConversion(temperature);
+			sendData(pulseRate);
+			sendData(tempRate);
 			break;
 		default: 
 			break;
@@ -114,6 +136,7 @@ void Reflectance_Tick()
 	switch(state) // actions
 	{
 		case read:
+			Set_A2D_PIN(0x04);
 			reflectSensor = ADC;
 			if(reflectSensor == 0x0000)
 				power = 0;
@@ -149,8 +172,14 @@ void Pulse_Tick()
 		case hold:
 			break;
 		case process:
+			Set_A2D_PIN(0x01);
 			pulseSensor = ADC;
-			heartbeat = heartConversion();
+			if(pulseSensor != 0x0000)
+				++heartbeat;
+			if(counter >= 50){
+				heart = heartConversion(heartbeat);
+				heartbeat = counter = 0;
+			}
 		default:
 			break;
 	}
@@ -179,8 +208,11 @@ void Temperature_Tick()
 		case pause:
 			break;
 		case readIn:
-			TemperatureSensor = ADC;
-			temperature = degreeConversion(TemperatureSensor);
+			Set_A2D_PIN(0x02);
+			temperatureSensor = ADC;
+			Set_A2D_PIN(0x03);
+			temperatureSensor2 = ADC;
+			temperature = degreeConversion(temperatureSensor, temperatureSensor2);
 		default:
 			break;
 	}
@@ -201,6 +233,7 @@ void Pulse_Task()
 	{
 		Pulse_Tick();
 		vTaskDelay(100);
+		++counter;
 	}
 }
 void Temperature_Task()
@@ -234,10 +267,10 @@ int main(void)
 	// Temperature Sensor
 	// Heart Rate Sensor
 	// Reflectance Sensor
-	DDRA = 0x00; PORTA = 0x00;
+	DDRA = 0x00; PORTA = 0xFF;
 	
 	//USART
-	DDRD = 0x00; PORTD = 0x00;
+	DDRD = 0xFF; PORTD = 0x00;
 	
 	StartFinalPulse(1);
 	vTaskStartScheduler();
