@@ -13,21 +13,20 @@
 */
 #include <stdlib.h>
 #include <string.h>
-#include <avr/pgmspacce.h>
+#include <avr/pgmspace.h>
 #include <util/atomic.h>
-#include <util/delay>
+#include <util/delay.h>
 #include <avr/io.h>
 
 #include "FreeRTOS.h"
-#include "tasks.h"
+#include "task.h"
 #include "croutine.h"
 #include "usart_ATmega1284.h"
 
 enum BluetoothModule{wait, send} blueState;
 enum ReceiveData{receive} receiveState;
-
 unsigned char temperature = 0x00;
-unsigned char heartbeat = 0x00;
+unsigned char heartbeat = 0x01;
 
 unsigned char receiveData()
 {
@@ -41,7 +40,31 @@ unsigned char receiveData()
 		}
 	}
 }
+unsigned char Data()
+{
+	unsigned char temp = 0;
+	while(1)
+	{
+		if(USART_HasReceived(0))
+		{
+			temp = USART_Receive(0);
+			return temp;
+		}
+	}
+}
 void blueData(unsigned char x)
+{
+	unsigned char hasSent = 0;
+	while(!hasSent)
+	{
+		if(USART_IsSendReady(1))
+		{
+			USART_Send(x, 1);
+			hasSent = 1;
+		}
+	}
+}
+void blue(unsigned char x)
 {
 	unsigned char hasSent = 0;
 	while(!hasSent)
@@ -69,7 +92,7 @@ void Receive_Tick()
 		case receive:
 			temperature = receiveData();
 			USART_Flush(0);
-			heartbeat = receiveData();
+			heartbeat = Data();
 			USART_Flush(0);
 			break;
 		default:
@@ -81,7 +104,7 @@ void Bluetooth_Tick()
 	switch(blueState) // transitions
 	{
 		case wait:
-			if((temperature != 0x00) && (heartbeat != 0x00)) 
+			if((temperature != 0x00) && (heartbeat != 0x00))
 				blueState = send;
 			else
 				blueState = wait;
@@ -102,7 +125,7 @@ void Bluetooth_Tick()
 			break;
 		case send:
 			blueData(temperature);
-			blueData(heartbeat);
+			blue(heartbeat);
 			break;
 		default:
 			break;
@@ -126,18 +149,17 @@ void Receive_Task()
 		vTaskDelay(100);
 	}
 }
-void StartFinalPulse(unsigned portBASE_TYPE priority)
+void StartFinalPulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Bluetooth_Task, (signed portCHAR *) "Bluetooth_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
-	XTaskCreate(Receive_Task, (signed portCHAR *) "Receive_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+	xTaskCreate(Receive_Task, (signed portCHAR *) "Receive_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 int main(void)
 {
-	initusart(0);
-	initusart(1);
+	initUSART(0);
+	initUSART(1);
 	// USART
 	DDRD = 0xFF; PORTD = 0x00;
-	
 	StartFinalPulse(1);
 	vTaskStartScheduler();
 }
