@@ -140,7 +140,7 @@ void Reflectance_Tick()
 			reflectSensor = ADC;
 			if(reflectSensor == 0x0000)
 				power = 0;
-			else if(reflectSensor = 0x0000)
+			else if(reflectSensor != 0x0000)
 				power = 1;
 			break;
 		default:
