@@ -11,7 +11,6 @@
  *	I acknowledge all content contained herein, excluding template or example 
  *	code, is my own original work.
  */ 
-
 #include <stdlib.h>
 #include <string.h>
 #include <avr/pgmspace.h>
@@ -19,19 +18,21 @@
 #include <util/delay.h>
 #include <avr/io.h>
 #include "FreeRTOS.h"
-#include "tasks.h"
+#include "task.h"
 #include "croutine.h"
+#include "usart_ATmega1284.h"
 
 unsigned short reflectSensor, temperatureSensor, temperatureSensor2, pulseSensor = 0x0000;
-unsigned char pulseRate, tempRate;
-float temperature = 0.0;
-int heartbeat, heart, power, counter = 0;
-char hexNumber[100];
+unsigned char pulseRate;
+int temperature = 0;
+int heartbeat, heart, counter = 0;
+int power = 0;
+int i = 0;
 
 enum ReflectanceSensor {read} state;
 enum PulseSensor{hold, process} pulseState;
-enum TemperatureSensor{pause, readIn} tempState;
-enum USARTCommunication{wait, send} usartState;
+enum TemperatureSensor{wait, readIn} tempState;
+enum USARTCommunication{wait1, send} usartState;
 	
 void ADC_init()
 {
@@ -40,7 +41,25 @@ void ADC_init()
 	// ADSC: Starts analog-to-digital conversion
 	// ADATE: Enables auto-triggering, allowing for constant analog to digital conversions.
 }
+void convert()
+{
+	ADCSRA |=(1<<ADSC);//start ADC conversion
+	while ( !(ADCSRA & (1<<ADIF)));//wait till ADC conversion
+	
+}
 void sendData(unsigned char x)
+{
+	unsigned char hasSent = 0;
+	while(!hasSent)
+	{
+		if(USART_IsSendReady(0))
+		{
+			USART_Send(x, 0);
+			hasSent = 1;
+		}
+	}
+}
+void Data(unsigned char x)
 {
 	unsigned char hasSent = 0;
 	while(!hasSent)
@@ -58,26 +77,12 @@ int heartConversion(int heartRate)
 	temp = heartRate * 12;
 	return temp;
 }
-char hexConversion(int decimal)
-{
-	int temp;
-	while (decimal != 0){
-	temp = decimal % 16;
-	if(temp < 10)
-		temp += 48;
-	else
-		temp += 55;
-	hexNumber[++i] = temp;
-	decimal = decimal / 16;
-	}
-	return hexNumber;
-}
 int degreeConversion(unsigned short temperatureSensor, unsigned short temperatureSensor2)
 {
 	float temp, temp2 = 0.0;
 	int realTemp = 0;
-	temp = (1.8 * (temperatureSensor / 9.31)) + 32;
-	temp2 = (1.8 * (temperatureSensor2 / 9.31)) + 32;
+	temp = (temperatureSensor * 500) / 1024;
+	temp2 = (temperatureSensor2 * 500) / 1024;
 	realTemp = (temp + temp2) / 2;
 	return realTemp;
 }
@@ -112,10 +117,10 @@ void USART_Tick()
 		case wait:
 			break;
 		case send:
-			pulseRate = hexConversion(heart);
-			tempRate = hexConversion(temperature);
-			sendData(pulseRate);
-			sendData(tempRate);
+			sendData(temperature);
+			USART_Flush(0);
+			Data(heart);
+			USART_Flush(0);
 			break;
 		default: 
 			break;
@@ -135,8 +140,7 @@ void Reflectance_Tick()
 	switch(state) // actions
 	{
 		case read:
-			Set_A2D_PIN(0x04);
-			reflectSensor = ADC;
+			reflectSensor = ~PINB & 0x01;
 			if(reflectSensor == 0x0000)
 				power = 0;
 			else if(reflectSensor != 0x0000)
@@ -169,16 +173,22 @@ void Pulse_Tick()
 	switch(pulseState) // actions
 	{
 		case hold:
+			counter = 0;
 			break;
 		case process:
 			Set_A2D_PIN(0x01);
+			convert();
 			pulseSensor = ADC;
-			if(pulseSensor != 0x0000)
+			if(pulseSensor != 0x001B)
+				PORTD = 0x80;
 				++heartbeat;
-			if(counter >= 50){
+			if(counter >= 5000){
 				heart = heartConversion(heartbeat);
-				heartbeat = counter = 0;
+				PORTC = heart;
+				heartbeat = 0;
+				counter = 0;
 			}
+			break;
 		default:
 			break;
 	}
@@ -189,7 +199,7 @@ void Temperature_Tick()
 	{
 		case wait:
 			if(power == 0)
-				tempState = pause;
+				tempState = wait;
 			else if (power == 1)
 				tempState = readIn;
 			break;
@@ -197,21 +207,24 @@ void Temperature_Tick()
 			if(power == 1)
 				tempState = readIn;
 			else if(power == 0)
-				tempState = pause;
+				tempState = wait;
 		default:
-			tempState = pause;
+			tempState = wait;
 			break;
 	}
 	switch(tempState) // actions
 	{
-		case pause:
+		case wait:
 			break;
 		case readIn:
 			Set_A2D_PIN(0x02);
+			convert();
 			temperatureSensor = ADC;
 			Set_A2D_PIN(0x03);
+			convert();
 			temperatureSensor2 = ADC;
 			temperature = degreeConversion(temperatureSensor, temperatureSensor2);
+			break;
 		default:
 			break;
 	}
@@ -222,7 +235,7 @@ void Reflectance_Task()
 	for(;;)
 	{
 		Reflectance_Tick();
-		vTaskDelay(100);
+		vTaskDelay(500);
 	}
 }
 void Pulse_Task()
@@ -231,17 +244,17 @@ void Pulse_Task()
 	for(;;)
 	{
 		Pulse_Tick();
-		vTaskDelay(100);
+		vTaskDelay(1);
 		++counter;
 	}
 }
 void Temperature_Task()
 {
-	tempState = pause;
+	tempState = wait;
 	for(;;)
 	{
 		Temperature_Tick();
-		vTaskDelay(100);
+		vTaskDelay(500);
 	}
 }
 void USART_Task()
@@ -250,7 +263,7 @@ void USART_Task()
 	for(;;)
 	{
 		USART_Tick();
-		vTaskDelay(100);
+		vTaskDelay(500);
 	}
 }
 void StartFinalPulse(unsigned portBASE_TYPE Priority)
@@ -262,14 +275,14 @@ void StartFinalPulse(unsigned portBASE_TYPE Priority)
 }
 int main(void)
 {
-	initusart(0);
-	initusart(1);
-	ADC_init;
+	initUSART(0);
+	initUSART(1);
+	ADC_init();
 	// Temperature Sensor
 	// Heart Rate Sensor
-	// Reflectance Sensor
 	DDRA = 0x00; PORTA = 0xFF;
-	
+	//Reflectance Sensor
+	DDRB = 0x00; PORTB = 0xFF;
 	//USART
 	DDRD = 0xFF; PORTD = 0x00;
 	
