@@ -91,8 +91,10 @@ void Receive_Tick()
 	{
 		case receive:
 			temperature = receiveData();
+			PORTC = temperature;
 			USART_Flush(0);
 			heartbeat = Data();
+			PORTA = heartbeat;
 			USART_Flush(0);
 			break;
 		default:
@@ -159,6 +161,9 @@ int main(void)
 	initUSART(0);
 	initUSART(1);
 	// USART
+	DDRA = 0xFF; PORTA = 0x00;
+	DDRB = 0xFF; PORTB = 0x00;
+	DDRC = 0xFF; PORTC = 0x00;
 	DDRD = 0xFF; PORTD = 0x00;
 	StartFinalPulse(1);
 	vTaskStartScheduler();
