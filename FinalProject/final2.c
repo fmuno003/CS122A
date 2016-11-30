@@ -1,4 +1,4 @@
-/* 	finalProject2.c - 11.16.2016
+/* 	final2.c - 11.16.2016
 *	Name & E-mail: Francisco Munoz		fmuno003@ucr.edu
 *	CS Login: fmuno003
 *	Lab Section: 022
@@ -11,7 +11,6 @@
 *	I acknowledge all content contained herein, excluding template or example code, is my
 *	own original work.
 */
-
 #include <stdlib.h>
 #include <string.h>
 #include <avr/pgmspacce.h>
@@ -42,7 +41,7 @@ unsigned char receiveData()
 		}
 	}
 }
-void sendData(unsigned char x)
+void blueData(unsigned char x)
 {
 	unsigned char hasSent = 0;
 	while(!hasSent)
@@ -69,7 +68,9 @@ void Receive_Tick()
 	{
 		case receive:
 			temperature = receiveData();
+			USART_Flush(0);
 			heartbeat = receiveData();
+			USART_Flush(0);
 			break;
 		default:
 			break;
@@ -79,11 +80,32 @@ void Bluetooth_Tick()
 {
 	switch(blueState) // transitions
 	{
-		
+		case wait:
+			if((temperature != 0x00) && (heartbeat != 0x00)) 
+				blueState = send;
+			else
+				blueState = wait;
+			break;
+		case send:
+			if((temperature == 0x00) || (heartbeat == 0x00))
+				blueState = wait;
+			else
+				blueState = send;
+			break;
+		default:
+			blueState = wait;
+			break;
 	}
 	switch(blueState) //actions
 	{
-		
+		case wait:
+			break;
+		case send:
+			blueData(temperature);
+			blueData(heartbeat);
+			break;
+		default:
+			break;
 	}
 }
 void Bluetooth_Task()
@@ -97,7 +119,7 @@ void Bluetooth_Task()
 }
 void Receive_Task()
 {
-	receiveState = wait2;
+	receiveState = receive;
 	for(;;)
 	{
 		Receive_Tick();
@@ -111,6 +133,8 @@ void StartFinalPulse(unsigned portBASE_TYPE priority)
 }
 int main(void)
 {
+	initusart(0);
+	initusart(1);
 	// USART
 	DDRD = 0xFF; PORTD = 0x00;
 	

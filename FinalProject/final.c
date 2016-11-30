@@ -1,4 +1,4 @@
-/*	finalProject.c - 11.14.2016
+/*	final.c - 11.14.2016
  *	Name & E-mail:  - Francisco Munoz		fmuno003@ucr.edu
  *	CS Login:  fmuno003
  *	Lab Section: 022
@@ -18,7 +18,6 @@
 #include <util/atomic.h>
 #include <util/delay.h>
 #include <avr/io.h>
-
 #include "FreeRTOS.h"
 #include "tasks.h"
 #include "croutine.h"
@@ -257,12 +256,14 @@ void USART_Task()
 void StartFinalPulse(unsigned portBASE_TYPE Priority)
 {
 	xTaskCreate(Reflectance_Task, (signed portCHAR *) "Reflectance_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
-	xTaskCreate(Pulse_Task, signed portCHAR *) "Pulse_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
-	xTaskCreate(Temperature_Task, signed portCHAR *) "Temperature_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
-	xTaskCreate(USART_Task, signed portCHAR *) "USART_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+	xTaskCreate(Pulse_Task, (signed portCHAR *) "Pulse_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+	xTaskCreate(Temperature_Task, (signed portCHAR *) "Temperature_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
+	xTaskCreate(USART_Task, (signed portCHAR *) "USART_Task", configMINIMAL_STACK_SIZE, NULL, Priority, NULL);
 }
 int main(void)
 {
+	initusart(0);
+	initusart(1);
 	ADC_init;
 	// Temperature Sensor
 	// Heart Rate Sensor
